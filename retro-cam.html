@@ -16,9 +16,7 @@
 
   :root {
     --cam-orange: #ff8c00;
-    --cam-orange-dim: #cc7000;
     --cam-green: #39ff14;
-    --cam-green-dim: #2bcc10;
     --cam-red: #ff2020;
     --cam-white: #e0e0d0;
     --font-main: 'VT323', 'Share Tech Mono', 'Courier New', monospace;
@@ -45,6 +43,17 @@
     width: 100%; height: 100%;
     object-fit: cover;
   }
+
+  /* ── Flash effect ── */
+  #flash {
+    position: fixed; inset: 0;
+    z-index: 9;
+    background: #fff;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.05s ease-out;
+  }
+  #flash.on { opacity: 0.9; transition: none; }
 
   /* ── Scanline + Vignette overlay ── */
   #fx-layer {
@@ -98,7 +107,6 @@
     line-height: 1.3;
   }
 
-  /* ── Location (top-left) ── */
   .location-block {
     color: var(--cam-green);
     font-size: clamp(13px, 3.2vw, 18px);
@@ -109,11 +117,8 @@
     opacity: 0.7;
     letter-spacing: 2px;
   }
-  .location-block .value {
-    letter-spacing: 1px;
-  }
+  .location-block .value { letter-spacing: 1px; }
 
-  /* ── DateTime (top-right) ── */
   .datetime-block {
     color: var(--cam-orange);
     font-size: clamp(14px, 3.5vw, 20px);
@@ -125,7 +130,7 @@
     letter-spacing: 3px;
   }
 
-  /* ── Center indicators ── */
+  /* ── Center ── */
   .center-area {
     flex: 1;
     display: flex;
@@ -136,7 +141,6 @@
     gap: 6px;
   }
 
-  /* ── REC indicator ── */
   .rec-indicator {
     display: flex;
     align-items: center;
@@ -161,7 +165,6 @@
     50% { opacity: 0.2; }
   }
 
-  /* ── Mode / battery ── */
   .status-line {
     color: var(--cam-white);
     font-size: clamp(11px, 2.6vw, 14px);
@@ -169,6 +172,29 @@
     letter-spacing: 2px;
     text-shadow: 0 0 4px rgba(255,255,255,0.3);
   }
+
+  /* ── Saved toast ── */
+  .toast {
+    position: fixed;
+    bottom: 140px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.75);
+    color: var(--cam-green);
+    font-family: var(--font-main);
+    font-size: clamp(13px, 3vw, 16px);
+    letter-spacing: 2px;
+    padding: 8px 20px;
+    border: 1px solid var(--cam-green);
+    border-radius: 4px;
+    text-shadow: 0 0 6px var(--cam-green);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 20;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
 
   /* ── Crosshair ── */
   .crosshair {
@@ -197,19 +223,58 @@
   /* ── Bottom bar ── */
   .bottom-bar {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
+    gap: 14px;
     padding-bottom: 8px;
     position: relative;
   }
 
-  /* ── REC Button ── */
-  .rec-btn {
+  /* ── Mode switcher ── */
+  .mode-switcher {
+    pointer-events: auto;
+    display: flex;
+    gap: 0;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px;
+    overflow: hidden;
+    backdrop-filter: blur(6px);
+  }
+  .mode-btn {
+    padding: 6px 22px;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.45);
+    font-family: var(--font-main);
+    font-size: clamp(13px, 3vw, 16px);
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mode-btn.active {
+    background: rgba(255,255,255,0.15);
+    color: var(--cam-white);
+    text-shadow: 0 0 6px rgba(255,255,255,0.5);
+  }
+
+  /* ── Shutter row ── */
+  .shutter-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    position: relative;
+  }
+
+  /* ── Main shutter/rec button ── */
+  .shutter-btn {
     pointer-events: auto;
     width: 72px; height: 72px;
     border-radius: 50%;
     background: transparent;
-    border: 3px solid rgba(255, 255, 255, 0.5);
+    border: 3px solid rgba(255,255,255,0.5);
     cursor: pointer;
     position: relative;
     display: flex;
@@ -218,24 +283,50 @@
     -webkit-tap-highlight-color: transparent;
     transition: border-color 0.2s;
   }
-  .rec-btn::before {
+  .shutter-btn::before {
     content: '';
     width: 54px; height: 54px;
     border-radius: 50%;
+    background: #fff;
+    opacity: 0.9;
+    transition: border-radius 0.25s ease, width 0.25s ease, height 0.25s ease, background 0.2s, opacity 0.2s;
+  }
+  /* video mode: red dot */
+  .shutter-btn.video-mode::before {
     background: var(--cam-red);
     opacity: 0.85;
-    transition: border-radius 0.25s ease, width 0.25s ease, height 0.25s ease, opacity 0.2s;
   }
-  .rec-btn.recording::before {
+  /* recording: square */
+  .shutter-btn.recording::before {
     width: 26px; height: 26px;
     border-radius: 6px;
     opacity: 1;
   }
-  .rec-btn.recording {
+  .shutter-btn.recording {
     border-color: var(--cam-red);
-    box-shadow: 0 0 12px rgba(255, 32, 32, 0.4);
+    box-shadow: 0 0 12px rgba(255,32,32,0.4);
   }
-  .rec-btn:active { transform: scale(0.92); }
+  .shutter-btn:active { transform: scale(0.92); }
+
+  /* ── Flip button ── */
+  .flip-btn {
+    pointer-events: auto;
+    position: absolute;
+    right: 16px;
+    width: 44px; height: 44px;
+    border: none;
+    background: rgba(255,255,255,0.12);
+    border-radius: 50%;
+    color: var(--cam-white);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    backdrop-filter: blur(4px);
+  }
+  .flip-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.2); }
 
   /* ── Corner brackets ── */
   .corner {
@@ -256,14 +347,23 @@
   .corner.tr::before, .corner.br::before { right: 0; width: 100%; height: 1.5px; }
   .corner.tl::after, .corner.tr::after  { top: 0; width: 1.5px; height: 100%; }
   .corner.bl::after, .corner.br::after  { bottom: 0; width: 1.5px; height: 100%; }
-  .corner.tl::before { top: 0; }
-  .corner.tl::after  { left: 0; }
-  .corner.tr::before { top: 0; }
-  .corner.tr::after  { right: 0; }
-  .corner.bl::before { bottom: 0; }
-  .corner.bl::after  { left: 0; }
-  .corner.br::before { bottom: 0; }
-  .corner.br::after  { right: 0; }
+  .corner.tl::before { top: 0; } .corner.tl::after  { left: 0; }
+  .corner.tr::before { top: 0; } .corner.tr::after  { right: 0; }
+  .corner.bl::before { bottom: 0; } .corner.bl::after  { left: 0; }
+  .corner.br::before { bottom: 0; } .corner.br::after  { right: 0; }
+
+  /* ── Zoom label ── */
+  .zoom-label {
+    position: absolute;
+    bottom: 22%;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--cam-orange);
+    font-size: clamp(11px, 2.5vw, 14px);
+    letter-spacing: 2px;
+    opacity: 0.5;
+    text-shadow: 0 0 4px var(--cam-orange);
+  }
 
   /* ── Error screen ── */
   .error-screen {
@@ -285,63 +385,29 @@
   .error-screen .msg { letter-spacing: 2px; text-shadow: 0 0 8px var(--cam-orange); }
   .error-screen .sub { font-size: 13px; color: var(--cam-white); opacity: 0.5; letter-spacing: 1px; }
   .error-screen.hidden { display: none; }
-
-  /* ── Zoom label ── */
-  .zoom-label {
-    position: absolute;
-    bottom: 22%;
-    left: 50%;
-    transform: translateX(-50%);
-    color: var(--cam-orange);
-    font-size: clamp(11px, 2.5vw, 14px);
-    letter-spacing: 2px;
-    opacity: 0.5;
-    text-shadow: 0 0 4px var(--cam-orange);
-  }
-
-  /* ── Flip button ── */
-  .flip-btn {
-    pointer-events: auto;
-    position: absolute;
-    right: 16px;
-    bottom: 0;
-    width: 44px; height: 44px;
-    border: none;
-    background: rgba(255,255,255,0.12);
-    border-radius: 50%;
-    color: var(--cam-white);
-    font-size: 20px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    -webkit-tap-highlight-color: transparent;
-    backdrop-filter: blur(4px);
-  }
-  .flip-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.2); }
 </style>
 </head>
 <body>
 
-<!-- Camera -->
 <div id="camera-layer">
   <video id="cam" autoplay playsinline muted></video>
 </div>
 
-<!-- Scanlines + Vignette -->
 <div id="fx-layer"></div>
+<div id="flash"></div>
 
-<!-- Error -->
 <div id="error-screen" class="error-screen hidden">
   <div class="icon">📹</div>
   <div class="msg">NO SIGNAL</div>
   <div class="sub">카메라 권한을 허용해 주세요</div>
 </div>
 
-<!-- UI Overlay -->
+<div class="toast" id="toast">SAVED TO NK</div>
+
+<canvas id="capture-canvas" style="display:none"></canvas>
+
 <div id="ui-layer">
 
-  <!-- Top -->
   <div class="top-bar">
     <div class="info-block location-block">
       <div class="label">📍 LOC</div>
@@ -353,16 +419,14 @@
     </div>
   </div>
 
-  <!-- Center -->
   <div class="center-area">
     <div class="rec-indicator" id="rec-indicator">
       <div class="rec-dot"></div>
       <span>● REC</span>
     </div>
-    <div class="status-line">SP ▸ STBY</div>
+    <div class="status-line" id="status-line">PHOTO ▸ READY</div>
   </div>
 
-  <!-- Decorative -->
   <div class="crosshair"></div>
   <div class="corner tl"></div>
   <div class="corner tr"></div>
@@ -370,38 +434,88 @@
   <div class="corner br"></div>
   <div class="zoom-label">x1.0</div>
 
-  <!-- Bottom -->
   <div class="bottom-bar">
-    <button class="rec-btn" id="rec-btn" aria-label="Record"></button>
-    <button class="flip-btn" id="flip-btn" aria-label="Flip camera">🔄</button>
+    <div class="mode-switcher">
+      <button class="mode-btn active" id="btn-photo">PHOTO</button>
+      <button class="mode-btn" id="btn-video">VIDEO</button>
+    </div>
+    <div class="shutter-row">
+      <button class="shutter-btn" id="shutter-btn" aria-label="Capture"></button>
+      <button class="flip-btn" id="flip-btn" aria-label="Flip camera">🔄</button>
+    </div>
   </div>
 </div>
 
 <script>
-(function() {
+(function () {
   'use strict';
 
   const $ = id => document.getElementById(id);
   const cam = $('cam');
-  const recBtn = $('rec-btn');
+  const shutterBtn = $('shutter-btn');
   const recIndicator = $('rec-indicator');
   const flipBtn = $('flip-btn');
-  const statusLine = document.querySelector('.status-line');
+  const statusLine = $('status-line');
   const errorScreen = $('error-screen');
+  const flash = $('flash');
+  const toast = $('toast');
+  const canvas = $('capture-canvas');
+  const btnPhoto = $('btn-photo');
+  const btnVideo = $('btn-video');
 
+  let mode = 'photo'; // 'photo' | 'video'
   let isRecording = false;
   let currentFacing = 'environment';
   let currentStream = null;
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let toastTimer = null;
+
+  // ── Filename helper ──
+  function timestamp() {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  }
+
+  // ── Toast ──
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+
+  // ── Save file (share → download fallback) ──
+  async function saveFile(blob, filename) {
+    const file = new File([blob], filename, { type: blob.type });
+    // Try Web Share API (iOS/Android saves to gallery)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'NK' });
+        showToast('SAVED ✓');
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') return; // user cancelled
+      }
+    }
+    // Fallback: download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    showToast('SAVED ✓');
+  }
 
   // ── Camera ──
   async function startCamera(facingMode) {
-    if (currentStream) {
-      currentStream.getTracks().forEach(t => t.stop());
-    }
+    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: facingMode }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: false
+        audio: true
       });
       cam.srcObject = stream;
       currentStream = stream;
@@ -414,18 +528,77 @@
   }
   startCamera(currentFacing);
 
-  // ── Flip camera ──
   flipBtn.addEventListener('click', () => {
+    if (isRecording) return;
     currentFacing = currentFacing === 'environment' ? 'user' : 'environment';
     startCamera(currentFacing);
   });
 
-  // ── REC button ──
-  recBtn.addEventListener('click', () => {
-    isRecording = !isRecording;
-    recBtn.classList.toggle('recording', isRecording);
-    recIndicator.classList.toggle('active', isRecording);
-    statusLine.textContent = isRecording ? 'SP ▸ REC ●' : 'SP ▸ STBY';
+  // ── Mode switch ──
+  function setMode(m) {
+    if (isRecording) return;
+    mode = m;
+    btnPhoto.classList.toggle('active', m === 'photo');
+    btnVideo.classList.toggle('active', m === 'video');
+    shutterBtn.classList.toggle('video-mode', m === 'video');
+    statusLine.textContent = m === 'photo' ? 'PHOTO ▸ READY' : 'VIDEO ▸ STBY';
+    recIndicator.classList.remove('active');
+  }
+  btnPhoto.addEventListener('click', () => setMode('photo'));
+  btnVideo.addEventListener('click', () => setMode('video'));
+
+  // ── Photo capture ──
+  function capturePhoto() {
+    const w = cam.videoWidth || 1920;
+    const h = cam.videoHeight || 1080;
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext('2d').drawImage(cam, 0, 0, w, h);
+
+    // Flash
+    flash.classList.add('on');
+    requestAnimationFrame(() => requestAnimationFrame(() => flash.classList.remove('on')));
+
+    canvas.toBlob(blob => {
+      if (!blob) return;
+      saveFile(blob, `NK_${timestamp()}.jpg`);
+    }, 'image/jpeg', 0.92);
+  }
+
+  // ── Video recording ──
+  function startRecording() {
+    if (!currentStream) return;
+    recordedChunks = [];
+    const mimeType = ['video/mp4', 'video/webm;codecs=vp9', 'video/webm'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+    mediaRecorder = new MediaRecorder(currentStream, mimeType ? { mimeType } : {});
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      const ext = mediaRecorder.mimeType.includes('mp4') ? 'mp4' : 'webm';
+      const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
+      saveFile(blob, `NK_${timestamp()}.${ext}`);
+    };
+    mediaRecorder.start(1000);
+    isRecording = true;
+    shutterBtn.classList.add('recording');
+    recIndicator.classList.add('active');
+    statusLine.textContent = 'VIDEO ▸ REC ●';
+  }
+
+  function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    isRecording = false;
+    shutterBtn.classList.remove('recording');
+    recIndicator.classList.remove('active');
+    statusLine.textContent = 'VIDEO ▸ STBY';
+  }
+
+  // ── Shutter button ──
+  shutterBtn.addEventListener('click', () => {
+    if (mode === 'photo') {
+      capturePhoto();
+    } else {
+      isRecording ? stopRecording() : startRecording();
+    }
   });
 
   // ── DateTime ──
@@ -435,49 +608,36 @@
     const yy = String(now.getFullYear()).slice(-2);
     const mm = pad(now.getMonth() + 1);
     const dd = pad(now.getDate());
-    const hh = pad(now.getHours());
-    const mi = pad(now.getMinutes());
-    const ss = pad(now.getSeconds());
     $('date-text').textContent = `${yy}.${mm}.${dd}`;
-    $('time-text').textContent = `${hh}:${mi}:${ss}`;
+    $('time-text').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
   }
   updateTime();
   setInterval(updateTime, 1000);
 
-  // ── Location (Kakao / Nominatim reverse geocode) ──
+  // ── Location ──
   function fetchLocation() {
-    if (!navigator.geolocation) {
-      $('location-text').textContent = 'LOCATION UNKNOWN';
-      return;
-    }
+    if (!navigator.geolocation) { $('location-text').textContent = 'LOCATION UNKNOWN'; return; }
     navigator.geolocation.getCurrentPosition(
       pos => {
         const { latitude: lat, longitude: lon } = pos.coords;
-        // Use Nominatim (OpenStreetMap) reverse geocode
         fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=16&accept-language=ko`)
           .then(r => r.json())
           .then(data => {
             const a = data.address || {};
-            // Korean-style: 시/도 + 구/군 + 동/읍/면
             const province = a.province || a.state || a.city || '';
             const county = a.city_district || a.county || a.borough || a.suburb || '';
             const town = a.neighbourhood || a.quarter || a.village || a.town || '';
             const parts = [province, county, town].filter(Boolean);
             $('location-text').textContent = parts.length ? parts.join(' ') : `${lat.toFixed(3)}°N ${lon.toFixed(3)}°E`;
           })
-          .catch(() => {
-            $('location-text').textContent = `${lat.toFixed(4)}°N`;
-          });
+          .catch(() => { $('location-text').textContent = `${lat.toFixed(4)}°N`; });
       },
-      () => {
-        $('location-text').textContent = 'LOCATION UNKNOWN';
-      },
+      () => { $('location-text').textContent = 'LOCATION UNKNOWN'; },
       { enableHighAccuracy: false, timeout: 8000 }
     );
   }
   fetchLocation();
 
-  // ── Prevent default zoom/scroll ──
   document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
 })();
 </script>
